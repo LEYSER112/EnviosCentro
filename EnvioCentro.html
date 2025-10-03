@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Control de Envíos</title>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #1a1a1a;
+      color: #f5f5f5;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      width: 90%;
+      max-width: 900px;
+      background: rgba(40, 40, 40, 0.95);
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    .hidden {
+      display: none;
+    }
+    .btn {
+      background: #007bff;
+      border: none;
+      padding: 0.8rem 1.5rem;
+      border-radius: 8px;
+      color: white;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.3s;
+      margin: 0.5rem;
+    }
+    .btn:hover {
+      background: #0056b3;
+    }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 1rem;
+    }
+    label {
+      margin-bottom: 0.5rem;
+    }
+    input, select {
+      padding: 0.6rem;
+      border-radius: 8px;
+      border: 1px solid #444;
+      background: #2a2a2a;
+      color: white;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      padding: 0.8rem;
+      border-bottom: 1px solid #444;
+      text-align: left;
+    }
+    .actions {
+      text-align: center;
+    }
+    .search-results {
+      background: #2a2a2a;
+      border: 1px solid #444;
+      border-radius: 8px;
+      margin-top: 0.5rem;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    .search-item {
+      padding: 0.5rem;
+      cursor: pointer;
+    }
+    .search-item:hover {
+      background: #444;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Control de Envíos</h1>
+
+    <div id="main-menu">
+      <div class="actions">
+        <button class="btn" onclick="showSection('registro')">Registrar Producto</button>
+        <button class="btn" onclick="showSection('envio')">Armar Envío</button>
+      </div>
+    </div>
+
+    <!-- Registro de productos -->
+    <div id="registro" class="hidden">
+      <h2>Registrar Producto</h2>
+      <div class="input-group">
+        <label>Código</label>
+        <input type="text" id="codigo" placeholder="Ej: P001">
+      </div>
+      <div class="input-group">
+        <label>Nombre</label>
+        <input type="text" id="nombre" placeholder="Ej: Cloro">
+      </div>
+      <div class="input-group">
+        <label>Presentación</label>
+        <select id="presentacion">
+          <option value="4">Galón (4 kg)</option>
+          <option value="22">Cuñete (22 kg)</option>
+          <option value="1">Litro (1 kg)</option>
+          <option value="0.5">Medio Litro (0.5 kg)</option>
+        </select>
+      </div>
+      <button class="btn" onclick="registrarProducto()">Registrar</button>
+      <table>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Nombre</th>
+            <th>Presentación</th>
+          </tr>
+        </thead>
+        <tbody id="tablaProductos"></tbody>
+      </table>
+      <div class="actions">
+        <button class="btn" onclick="showSection('main-menu')">Volver</button>
+      </div>
+    </div>
+
+    <!-- Armado de envío -->
+    <div id="envio" class="hidden">
+      <h2>Armar Envío</h2>
+      <div class="input-group">
+        <label>Buscar producto</label>
+        <input type="text" id="buscarProducto" oninput="buscar()" placeholder="Escribe el nombre o código">
+        <div class="search-results" id="resultadosBusqueda"></div>
+      </div>
+      <div id="cantidadForm" class="hidden">
+        <div class="input-group">
+          <label>Cantidad</label>
+          <input type="number" id="cantidadAgregar" min="1" value="1">
+        </div>
+        <button class="btn" onclick="agregarAlEnvio()">Agregar al Envío</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Nombre</th>
+            <th>Presentación</th>
+            <th>Cantidad</th>
+            <th>Peso total (kg)</th>
+          </tr>
+        </thead>
+        <tbody id="tablaEnvio"></tbody>
+      </table>
+      <h3 id="pesoTotal">Peso Total: 0 kg</h3>
+      <div class="actions">
+        <button class="btn" onclick="showSection('main-menu')">Volver</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let productos = [];
+    let envio = [];
+    let productoSeleccionado = null;
+
+    function showSection(id){
+      document.querySelectorAll('.container > div').forEach(sec => sec.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+    }
+
+    function registrarProducto(){
+      const codigo = document.getElementById('codigo').value.trim();
+      const nombre = document.getElementById('nombre').value.trim();
+      const presentacion = document.getElementById('presentacion');
+      const peso = parseFloat(presentacion.value);
+      const texto = presentacion.options[presentacion.selectedIndex].text;
+
+      if(!codigo || !nombre){
+        alert('Por favor completa todos los campos');
+        return;
+      }
+
+      productos.push({codigo, nombre, peso, texto});
+      actualizarTablaProductos();
+      document.getElementById('codigo').value = '';
+      document.getElementById('nombre').value = '';
+    }
+
+    function actualizarTablaProductos(){
+      const tbody = document.getElementById('tablaProductos');
+      tbody.innerHTML = '';
+      productos.forEach(p => {
+        const row = `<tr><td>${p.codigo}</td><td>${p.nombre}</td><td>${p.texto}</td></tr>`;
+        tbody.innerHTML += row;
+      });
+    }
+
+    function buscar(){
+      const termino = document.getElementById('buscarProducto').value.toLowerCase();
+      const resultados = productos.filter(p => p.nombre.toLowerCase().includes(termino) || p.codigo.toLowerCase().includes(termino));
+      const contenedor = document.getElementById('resultadosBusqueda');
+      contenedor.innerHTML = '';
+      resultados.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'search-item';
+        div.textContent = `${p.codigo} - ${p.nombre} (${p.texto})`;
+        div.onclick = () => seleccionarProducto(p);
+        contenedor.appendChild(div);
+      });
+    }
+
+    function seleccionarProducto(p){
+      productoSeleccionado = p;
+      document.getElementById('cantidadForm').classList.remove('hidden');
+    }
+
+    function agregarAlEnvio(){
+      const cantidad = parseInt(document.getElementById('cantidadAgregar').value);
+      if(!productoSeleccionado || cantidad < 1) return;
+      const pesoTotal = cantidad * productoSeleccionado.peso;
+      envio.push({...productoSeleccionado, cantidad, pesoTotal});
+      actualizarTablaEnvio();
+      productoSeleccionado = null;
+      document.getElementById('cantidadForm').classList.add('hidden');
+      document.getElementById('buscarProducto').value = '';
+      document.getElementById('resultadosBusqueda').innerHTML = '';
+    }
+
+    function actualizarTablaEnvio(){
+      const tbody = document.getElementById('tablaEnvio');
+      tbody.innerHTML = '';
+      let total = 0;
+      envio.forEach(p => {
+        total += p.pesoTotal;
+        const row = `<tr><td>${p.codigo}</td><td>${p.nombre}</td><td>${p.texto}</td><td>${p.cantidad}</td><td>${p.pesoTotal}</td></tr>`;
+        tbody.innerHTML += row;
+      });
+      document.getElementById('pesoTotal').textContent = `Peso Total: ${total} kg`;
+    }
+  </script>
+</body>
+</html>
